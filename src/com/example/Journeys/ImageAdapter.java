@@ -13,6 +13,8 @@ import com.google.android.gms.plus.model.people.Person;
  */
 public class ImageAdapter extends PagerAdapter {
 
+    // Image adapter for HistoryFragment ViewPager
+    mainActivity main = new mainActivity();
     Context context;
     private int[] Images = new int[]{
             R.drawable.one , R.drawable.two, R.drawable.three,

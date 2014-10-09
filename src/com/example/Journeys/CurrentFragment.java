@@ -1,11 +1,14 @@
 package com.example.Journeys;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 
+import android.graphics.PorterDuff;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -17,11 +20,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 
-
 import android.widget.EditText;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
-import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.maps.*;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,16 +39,15 @@ import java.util.Date;
 public class CurrentFragment extends Fragment {
 
 
-    Button bPhoto, bRec, bNote;
-    private GoogleMap map;
+    Button bPhoto, bRec;
+    private GoogleMap map ;
     Location lastKnown;
     String buffer;
     String locationProvider_network = LocationManager.NETWORK_PROVIDER;
     String locationProvider_GPS = LocationManager.GPS_PROVIDER;
     LocationManager locationManager;
     LocationListener locationListener;
-    SimpleDateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
+    Journey journey = new Journey();
 
     ArrayList<Location> locale_buffer = new ArrayList<Location>();
     ArrayList<String> t_d = new ArrayList<String>();
@@ -53,16 +57,13 @@ public class CurrentFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View myFragmentView = inflater.inflate(R.layout.current_frag, container, false);
 
-
-       // map = ((SupportMapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
-        // for changing map location CameraUpdate update = CameraUpdateFactor.newLatLngZoom(LOCATION, 1-20);
-        //for marker map.addMarker(new MarkerOptions().position(Location).title("Message");
-
-
-        bPhoto = (Button) myFragmentView.findViewById(R.id.button);
+        //Get button and set colour
         bRec = (Button) myFragmentView.findViewById(R.id.bRec);
-        bNote = (Button) myFragmentView.findViewById(R.id.bNote);
-
+        bRec.getBackground().setColorFilter(0xFF00FF00, PorterDuff.Mode.MULTIPLY);
+       //Get button and set to invisible as user shouldnt be able to use
+        //it if they havent started their jouney
+        bPhoto = (Button) myFragmentView.findViewById(R.id.button);
+        bPhoto.setVisibility(View.GONE);
 
 
         /*+++++++++++++++++++Photo capture code+++++++++++++++++++*/
@@ -74,21 +75,55 @@ public class CurrentFragment extends Fragment {
             }
         });
 
+        /*+++++++++++++++++++Button listeners+++++++++++++++++++*/
         bRec.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-               if(bRec.getText()== "Start Rec"){
+                if(bRec.getText()== getResources().getString(R.string.start)){
 
-                   bRec.setText("Stop Rec");
-                 //  startJourney();
+                    bRec.setText(R.string.stop);
+                    bPhoto.setVisibility(View.VISIBLE);
+                    bRec.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
+                    startJourney();
 
-               }else {
-                   bRec.setText("Start Rec");
-                 //  locationManager.removeUpdates(locationListener);
-               }
+                }else {
+                    bRec.setText(getResources().getString(R.string.start));
+                    buffer = showDialogJourney(getView());
+                    bPhoto.setVisibility(View.GONE);
+                    bRec.getBackground().setColorFilter(0xFF00FF00, PorterDuff.Mode.MULTIPLY);
+
+                    journey.endJourney(buffer);
+                    locationManager.removeUpdates(locationListener);
+                }
             }
         });
 
+       /*+++++++++++++++++++Adding Google Map and updating map+++++++++++++++++++*/
+
+        // Getting Google Play availability status
+        int available = GooglePlayServicesUtil.isGooglePlayServicesAvailable(getActivity());
+
+        if(available!= ConnectionResult.SUCCESS){ // Services are not available
+
+            int requestCode = 10;
+            Dialog dialog = GooglePlayServicesUtil.getErrorDialog(available, getActivity(), requestCode);
+            dialog.show();
+
+        }else { // Services are available
+
+            // Getting GoogleMap object from the fragment
+            map = ((SupportMapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
+
+            // Enabling MyLocation Layer of Google Map
+            map.setMyLocationEnabled(true);
+
+            // Creating a criteria object to retrieve provider
+            Criteria criteria = new Criteria();
+
+            // Getting the name of the best provider
+            String provider = locationManager.getBestProvider(criteria, true);
+
+        }
 
 
         return myFragmentView;
@@ -97,32 +132,37 @@ public class CurrentFragment extends Fragment {
     @Override // Overiding Activity Result
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
+        /*+++++++++++++++++++Get image from camera, caption for image and location image was taken+++++++++++++++++++*/
         Bitmap bm = (Bitmap) data.getExtras().get("data");
-        String caption = showDialog(getView());
+        String caption = showDialogCaption(getView());
         String time_date = getDate();
         Location photo_location = getLocale();
 
 
-        //For adding pin to google maps
-        /*mMap = ((MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
-            mMap.addMarker(new MarkerOptions()
-                .position(new LatLng(0, 0))
-                .title("Hello world"));*/
+           // Save image/caption/location to data model
+           journey.addPhotos(bm, caption, photo_location);
+            //For adding pin to google maps
+            map.addMarker(new MarkerOptions()
+                    .position(new LatLng(0, 0))
+                    .title(caption)
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.iconphoto)));
+
 
     }
 
    public void startJourney(){
 
-
        locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
-
 
        locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
+                // Save new location and timestamp to db
+                LatLng loc = new LatLng(location.getLatitude(), location.getLongitude());
+                String time_date = getDate();
 
-               updateLocation(locale_buffer, t_d);
+                CameraUpdate update = CameraUpdateFactory.newLatLngZoom(loc, 20);
+
 
             }
 
@@ -142,29 +182,20 @@ public class CurrentFragment extends Fragment {
             }
        };
 
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000 ,5, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, locationListener);
+//        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000 ,5, locationListener);
+
 
 
     }
 
-    public void updateLocation(ArrayList<Location> locale, ArrayList<String> time){
-
-     lastKnown = getLocale();
-
-     String time_date = getDate();
-
-     locale.add(lastKnown);
-     time.add(time_date);
-    }
-
-    public String showDialog(View view){
+    public String showDialogCaption(View view){
 
 
         final EditText input = new EditText(getActivity());
 
         AlertDialog alert = new AlertDialog.Builder(getActivity())
-                .setTitle("Caption")
+                .setTitle("Photo captured")
                 .setMessage("Attach caption?")
                 .setView(input)
                 .setNegativeButton("No Thanks", new DialogInterface.OnClickListener() {
@@ -178,14 +209,41 @@ public class CurrentFragment extends Fragment {
                     public void onClick(DialogInterface dialog, int which) {
 
                         buffer = input.getText().toString();
+
                     }
                 }).show();
 
 
             return buffer;
     }
-    public String getDate(){
+    public String showDialogJourney(View view){
 
+        // Dialog box for end of journey, entering journey name
+        final EditText input = new EditText(getActivity());
+
+        AlertDialog alert = new AlertDialog.Builder(getActivity())
+                .setTitle("Journey Complete")
+                .setMessage("Please name your Journey")
+                .setView(input)
+                .setNegativeButton("Discard Journey", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        buffer = "";
+
+                    }
+                }).setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                        buffer = input.getText().toString();
+
+                    }
+                }).show();
+
+        return buffer;
+    }
+    public String getDate(){
+        // Gets formatted date
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:SS");
         String time_date = simpleDateFormat.format(new Date());
 
@@ -193,7 +251,7 @@ public class CurrentFragment extends Fragment {
     }
 
     public Location getLocale(){
-
+        // Gets last known location from available provider
         lastKnown = locationManager.getLastKnownLocation(locationProvider_GPS);
 
         if(lastKnown == null){
@@ -203,4 +261,5 @@ public class CurrentFragment extends Fragment {
 
         return lastKnown;
     }
+
 }

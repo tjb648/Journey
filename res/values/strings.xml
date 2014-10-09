@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Journeys</string>
+    <string name="start">Start Rec</string>
+    <string name="take">Take Photo</string>
+    <string name="stop">Stop</string>
 </resources>

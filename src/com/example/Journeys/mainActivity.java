@@ -3,16 +3,24 @@ package com.example.Journeys;
 import android.app.ActionBar;
 
 import android.app.FragmentTransaction;
-import android.database.sqlite.SQLiteDatabase;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.location.Criteria;
+import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Message;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.view.View;
+
+import java.io.InputStream;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class mainActivity extends FragmentActivity implements ActionBar.TabListener {
@@ -21,13 +29,13 @@ public class mainActivity extends FragmentActivity implements ActionBar.TabListe
     ViewPager myViewPager;
     ActionBar actionbar;
     LocationManager manager;
+
     JourneyDatabaseAdapter helper;
-    User user;
 
-    public User getUser(){
+    Context context;
+    InputStream is = null;
+    Bitmap bm = null;
 
-        return this.user;
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -37,17 +45,6 @@ public class mainActivity extends FragmentActivity implements ActionBar.TabListe
         helper = new JourneyDatabaseAdapter(this);
         fragmentmanager = getSupportFragmentManager();
 
-       // long id = helper.insertData("Journey 1");
-       // if(id<0){
-
-
-      //  }
-
-
-
-
-
-/*
 
         manager = (LocationManager)getSystemService(LOCATION_SERVICE);
         
@@ -62,9 +59,8 @@ public class mainActivity extends FragmentActivity implements ActionBar.TabListe
         if (providers == null || providers.size() == 0){
             System.out.println("No GPS Service");
         }
-        String preferred = providers.get(0);*/
+        String preferred = providers.get(0);
 
-       // manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mlocListener);
 
         myViewPager = (ViewPager) findViewById(R.id.pager);
         myViewPager.setAdapter(new MyAdapter(getSupportFragmentManager()));
@@ -130,12 +126,12 @@ public class mainActivity extends FragmentActivity implements ActionBar.TabListe
 
     public void viewDatabase(View view){
 
-        String data = helper.getData();
-        System.out.println(data);
+      //  String data = helper.getData();
+       // System.out.println(data);
 
     }
 }
-
+// Actionbar/Swipey fragments
 class MyAdapter extends FragmentPagerAdapter {
     public MyAdapter(FragmentManager fm) {
         super(fm);
